@@ -9,12 +9,18 @@
         </p>
     </div>
     <div class="block">
-        <h2 class="title is-3">Description longue</h2>
-        {{ table_informations['description_long'] if table_informations['description_long'] else 'Pas de description longue' }}
+        <article class="message is-info">
+            <div class="message-header">
+                Description longue
+            </div>
+            <div class="message-body">
+                {{ table_informations['description_long'] if table_informations['description_long'] else 'Pas de description longue' }}
+            </div>
+        </article>
     </div>
     <div class="block">
         <h2 class="title is3">Liste des champs</h2>
-        <table class="table is-striped is-hoverable">
+        <table class="table is-striped is-hoverable is-fullwidth">
             <thead>
             <tr>
                 <th>Champ</th>
