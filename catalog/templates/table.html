@@ -1,0 +1,36 @@
+{% extends 'layout.html' %}
+
+{% block title %}{{ schema }}.{{ table }}{% endblock %}
+{% block content %}
+    <div class="block">
+        <h1 class="title is-1">{{ schema }}.{{ table }}</h1>
+        <p class="subtitle is-3">
+            {{ table_informations['description'] if table_informations['description'] else 'Pas de description courte' }}
+        </p>
+    </div>
+    <div class="block">
+        <h2 class="title is-3">Description longue</h2>
+        {{ table_informations['description_long'] if table_informations['description_long'] else 'Pas de description longue' }}
+    </div>
+    <div class="block">
+        <h2 class="title is3">Liste des champs</h2>
+        <table class="table is-striped is-hoverable">
+            <thead>
+            <tr>
+                <th>Champ</th>
+                <th>Type</th>
+                <th>Description</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for column in columns %}
+                <tr>
+                    <td>{{ column['column_name'] }}</td>
+                    <td>{{ column['data_type'] }}</td>
+                    <td>{{ column['description'] }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

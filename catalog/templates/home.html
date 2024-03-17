@@ -1,0 +1,21 @@
+{% extends 'layout.html' %}
+{% block title %}Schémas{% endblock %}
+{% block content %}
+    <div class="block">
+        <h1 class="title is-1">BDU</h1>
+        <p class="subtitle is-3">Catalogue de données</p>
+    </div>
+    <div class="block">
+        <h2 class="title is-3">Liste des schémas</h2>
+        {% for schema in schemas %}
+            <details class="block">
+                <summary class="title is-4">{{ schema }}</summary>
+                <ul>
+                    {% for table in schemas[schema] %}
+                        <li><a href="{{ url_for('catalog.table', schema=schema, table=table) }}">{{ table }}</a></li>
+                    {% endfor %}
+                </ul>
+            </details>
+        {% endfor %}
+    </div>
+{% endblock %}
