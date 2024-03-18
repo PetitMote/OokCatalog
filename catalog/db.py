@@ -1,6 +1,6 @@
 import psycopg
 from psycopg.rows import dict_row
-from psycopg.sql import SQL, Identifier, Placeholder
+from psycopg.types.enum import EnumInfo, register_enum
 from flask import current_app, g
 
 
@@ -20,6 +20,11 @@ def get_db():
         password={current_app.config['DATABASE']['PASSWORD']}
         """,
             row_factory=dict_row,
+        )
+        # Registering months Enum information so it’s correctly interpreted by psycopg
+        register_enum(
+            EnumInfo.fetch(g.db, 'pgeasycatalog_month'),
+            g.db,
         )
 
     return g.db
@@ -76,9 +81,13 @@ def db_read_informations(db, schema: str, table: str):
         # Reading the table information from the catalog table
         cur.execute(
             """
-            SELECT obj_description(to_regclass(%s)) as description, description_long
+            SELECT obj_description(to_regclass(%s)) as description,
+            description_long,
+            array_agg(update_month order by update_month) as update_months
             FROM public.pgeasycatalog
+            CROSS JOIN LATERAL unnest(update_months) as update_month
             WHERE table_schema = (%s) AND table_name = (%s)
+            GROUP BY table_schema, table_name, description_long;
             """,
             (
                 f"{schema}.{table}",
