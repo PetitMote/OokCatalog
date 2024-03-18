@@ -1,4 +1,5 @@
 import psycopg
+from psycopg import cursor
 from psycopg.rows import dict_row
 from psycopg.types.enum import EnumInfo, register_enum
 from flask import current_app, g
@@ -23,7 +24,7 @@ def get_db():
         )
         # Registering months Enum information so it’s correctly interpreted by psycopg
         register_enum(
-            EnumInfo.fetch(g.db, 'pgeasycatalog_month'),
+            EnumInfo.fetch(g.db, "pgeasycatalog_month"),
             g.db,
         )
 
@@ -42,10 +43,9 @@ def db_read_schema(db):
         # Reading the schemas from the information schema
         cur.execute(
             """
-        SELECT schema_name, array_agg(table_name order by table_name)::text[] as tables
-        FROM information_schema.schemata
-        INNER JOIN information_schema.tables ON tables.table_schema = schemata.schema_name
-        WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'topology')
+        SELECT table_schema as schema_name, array_agg(table_name order by table_name)::text[] as tables
+        FROM information_schema.tables
+        WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
         GROUP BY schema_name
         ORDER BY schema_name;"""
         )
@@ -98,3 +98,47 @@ def db_read_informations(db, schema: str, table: str):
         # Fetching the result
         table_informations = cur.fetchone()
         return table_informations
+
+
+def db_search(db, query: str):
+    with db.cursor() as cur:
+        # Searching for tables matching the query
+        cur.execute(
+            """
+            SELECT table_schema, table_name, table_comment, ts_rank('{0.2, 0.5, 0.7, 1.0}', vector, query) as rank
+            FROM (SELECT *,
+                         setweight(to_tsvector(table_name), 'A') ||
+                         setweight(to_tsvector(table_comment), 'A') ||
+                         setweight(to_tsvector(description_long), 'B') ||
+                         setweight(to_tsvector(column_names), 'C') ||
+                         setweight(to_tsvector(column_comments), 'C') as vector
+                  FROM (SELECT tables.table_schema,
+                               tables.table_name,
+                               coalesce(obj_description(to_regclass(tables.table_schema || '.' || tables.table_name)),
+                                        '')                                  AS table_comment,
+                               coalesce(cat.description_long, '')            AS description_long,
+                               coalesce(string_agg(column_name, ' '), '')    as column_names,
+                               coalesce(string_agg(column_comment, ' '), '') as column_comments
+                        FROM information_schema.tables
+                                 LEFT JOIN public.pgeasycatalog cat
+                                           on tables.table_schema = cat.table_schema AND tables.table_name = cat.table_name
+                                 CROSS JOIN LATERAL (
+                            SELECT column_name,
+                                   col_description(to_regclass(table_schema || '.' || table_name),
+                                                   ordinal_position) as column_comment
+                            FROM information_schema.columns
+                            WHERE columns.table_schema = tables.table_schema
+                              AND columns.table_name = tables.table_name
+                            )
+                        WHERE tables.table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
+                        GROUP BY tables.table_schema, tables.table_name, description_long) AS tables_strings) AS tables_vectors,
+                websearch_to_tsquery('french', (%s)) AS query
+            WHERE vector @@ query
+            ORDER BY rank DESC
+            LIMIT 20;
+            """,
+            (query,),
+        )
+        # Fetching the result
+        search_results = cur.fetchall()
+        return search_results

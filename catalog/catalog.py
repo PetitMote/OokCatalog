@@ -1,5 +1,11 @@
-from flask import Blueprint, render_template
-from catalog.db import get_db, db_read_schema, db_read_columns, db_read_informations
+from flask import Blueprint, render_template, request
+from catalog.db import (
+    get_db,
+    db_read_schema,
+    db_read_columns,
+    db_read_informations,
+    db_search,
+)
 
 bp = Blueprint("catalog", __name__)
 
@@ -22,4 +28,15 @@ def table(schema: str, table: str):
         table=table,
         columns=columns,
         table_informations=table_informations,
+    )
+
+
+@bp.route("/search")
+def search():
+    db = get_db()
+    query = request.args.get('q')
+    search_results = db_search(db, query)
+    return render_template(
+        "search.html",
+        search_results=search_results,
     )
