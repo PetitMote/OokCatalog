@@ -107,11 +107,11 @@ def db_search(db, query: str):
             """
             SELECT table_schema, table_name, table_comment, ts_rank('{0.2, 0.5, 0.7, 1.0}', vector, query) as rank
             FROM (SELECT *,
-                         setweight(to_tsvector(table_name), 'A') ||
-                         setweight(to_tsvector(table_comment), 'A') ||
-                         setweight(to_tsvector(description_long), 'B') ||
-                         setweight(to_tsvector(column_names), 'C') ||
-                         setweight(to_tsvector(column_comments), 'C') as vector
+                         setweight(to_tsvector('french', table_name), 'A') ||
+                         setweight(to_tsvector('french', table_comment), 'A') ||
+                         setweight(to_tsvector('french', description_long), 'B') ||
+                         setweight(to_tsvector('french', column_names), 'C') ||
+                         setweight(to_tsvector('french', column_comments), 'C') as vector
                   FROM (SELECT tables.table_schema,
                                tables.table_name,
                                coalesce(obj_description(to_regclass(tables.table_schema || '.' || tables.table_name)),
