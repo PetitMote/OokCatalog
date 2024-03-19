@@ -123,17 +123,38 @@ ALTER TABLE public.ookcatalog
 
 ### Create a python environment
 
-Create a python environment
+Create a python environment where you want to install OokCatalog. You can then use PyPi to download and install the last
+published version of the catalog.
 
-Download the release and
+```commandline
+pip install ookcatalog
+```
 
 ### Configure OokCatalog
 
-Modify the configuration so the catalog points to your database and your newly created user
+Download [config_sample.py](./config_sample.py). Edit the file according to your situation and register it where you
+want to keep it. When you launch OokCatalog, use the environment variable to point to your config file. If the
+environment variable isn’t set, the app will crash.
 
-Point your webserver to your new OokCatalog
+```commandline
+OOKCATALOG_SETTINGS='/absolute/path/to/config.py' server_run_command
+```
 
-That’s it!
+You can also set the path to your config file as a relative path, but keep in mind that OokCatalog will look for it
+based on the instance folder. That means that the root of the relative path will be based on your venv folder :
+
+```commandline
+.venv/var/ookcatalog-instance/
+```
+
+You can export / set the environment variable if desired.
+
+When launching the WSGI server, pass the OokCatalog app as a parameter. For example, full command with Waitress could
+be :
+
+```commandline
+OOKCATALOGUE_SETTINGS='/var/www/ookcatalog/config.py' waitress-serve --call 'ookcatalog:create_app'
+```
 
 ## Usage
 
