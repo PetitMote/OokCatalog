@@ -1,5 +1,4 @@
 import psycopg
-from psycopg import cursor
 from psycopg.rows import dict_row
 from psycopg.types.enum import EnumInfo, register_enum
 from flask import current_app, g
