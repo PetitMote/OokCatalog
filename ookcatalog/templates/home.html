@@ -12,7 +12,7 @@
                 <summary class="title is-4">{{ schema }}</summary>
                 <ul>
                     {% for table in schemas[schema] %}
-                        <li><a href="{{ url_for('catalog.table', schema=schema, table=table) }}">{{ table }}</a></li>
+                        <li><a href="{{ url_for('ookcatalog.table', schema=schema, table=table) }}">{{ table }}</a></li>
                     {% endfor %}
                 </ul>
             </details>

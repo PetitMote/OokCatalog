@@ -12,7 +12,7 @@
         <div class="container is-max-desktop">
             <nav class="level">
                 <div class="level-left">
-                    <a href="{{ url_for('catalog.home') }}">
+                    <a href="{{ url_for('ookcatalog.home') }}">
                         <div class="level-item">
                             <p class="subtitle is-3">PGEasyCatalog</p>
                         </div>
@@ -20,7 +20,7 @@
                 </div>
                 <div class="level-right">
                     <div class="level-item">
-                        <form action="{{ url_for('catalog.search') }}" method="get">
+                        <form action="{{ url_for('ookcatalog.search') }}" method="get">
                             <div class="field has-addons">
                                 <div class="control">
                                     <input name="q" required minlength="3" class="input" type="text" placeholder="Trouver une table">

@@ -7,7 +7,7 @@
     </div>
     {% for result in search_results %}
         <div class="block">
-            <a href="{{ url_for('catalog.table', schema=result['table_schema'], table=result['table_name']) }}">
+            <a href="{{ url_for('ookcatalog.table', schema=result['table_schema'], table=result['table_name']) }}">
                 <div class="message is-link">
                     <div class="message-header">{{ result['table_schema'] }}.{{ result['table_name'] }}</div>
                     {% if result['table_comment'] %}

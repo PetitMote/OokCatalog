@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request
-from catalog.db import (
+from ookcatalog.db import (
     get_db,
     db_read_schema,
     db_read_columns,
@@ -7,7 +7,7 @@ from catalog.db import (
     db_search,
 )
 
-bp = Blueprint("catalog", __name__)
+bp = Blueprint("ookcatalog", __name__)
 
 
 @bp.route("/")

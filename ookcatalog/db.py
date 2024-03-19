@@ -78,7 +78,7 @@ def db_read_columns(db, schema: str, table: str):
 
 def db_read_informations(db, schema: str, table: str):
     with db.cursor() as cur:
-        # Reading the table information from the catalog table
+        # Reading the table information from the ookcatalog table
         cur.execute(
             """
             SELECT obj_description(to_regclass(%s)) as description,
