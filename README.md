@@ -48,6 +48,8 @@ These might come later :
 
 ![](documentation/static/ookcatalog_table.png)
 
+![](documentation/static/ookcatalog_search.png)
+
 ## Installation
 
 ### Setting up the database
