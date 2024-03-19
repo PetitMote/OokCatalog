@@ -8,6 +8,35 @@
 </head>
 <body>
 <main>
+    <header class="section">
+        <div class="container is-max-desktop">
+            <nav class="level">
+                <div class="level-left">
+                    <a href="{{ url_for('catalog.home') }}">
+                        <div class="level-item">
+                            <p class="subtitle is-3">PGEasyCatalog</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="level-right">
+                    <div class="level-item">
+                        <form action="{{ url_for('catalog.search') }}" method="get">
+                            <div class="field has-addons">
+                                <div class="control">
+                                    <input name="q" required minlength="3" class="input" type="text" placeholder="Trouver une table">
+                                </div>
+                                <div class="control">
+                                    <button type="submit" class="button is-primary">
+                                        Recherche
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
     <section class="section">
         <div class="container is-max-desktop">
             {% block content %}{% endblock %}
