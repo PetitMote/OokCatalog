@@ -34,7 +34,7 @@ def table(schema: str, table: str):
 @bp.route("/search")
 def search():
     db = get_db()
-    query = request.args.get('q')
+    query = request.args.get("q")
     search_results = db_search(db, query)
     return render_template(
         "search.html",

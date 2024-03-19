@@ -13,11 +13,12 @@ CREATE TYPE pgeasycatalog_month AS ENUM (
     'Décembre'
 );
 
-create table public.pgeasycatalog (
-  table_schema text not null,
-  table_name text not null,
-  description_long text,
-  update_months pgeasycatalog_month[],
-  primary key (table_schema, table_name)
+CREATE TABLE public.pgeasycatalog (
+  table_schema TEXT NOT NULL,
+  table_name TEXT NOT NULL,
+  description_long TEXT,
+  update_months PGEASYCATALOG_MONTH[],
+  PRIMARY KEY (table_schema, table_name)
 );
 
+ALTER TABLE public.pgeasycatalog OWNER TO pgeasycatalog;
