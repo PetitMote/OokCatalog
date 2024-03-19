@@ -1,11 +1,25 @@
 [project]
 name = "ookcatalog"
 version = "0.0.0"
+authors = [
+    { name="Moté", email="automates@petitmote.fr"}
+]
 description = "Light and hassle-free PostgreSQL data catalog"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 dependencies = [
     "flask",
     "psycopg[binary]",
 ]
+
+[project.urls]
+Homepage = "https://github.com/PetitMote/OokCatalog"
+Issues = "https://github.com/PetitMote/OokCatalog/issues"
 
 [build-system]
 requires = ["flit_core<4"]
