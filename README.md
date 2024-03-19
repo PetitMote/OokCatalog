@@ -1,10 +1,10 @@
-# PGEasyCatalog
+# The Ook Catalog
 
-![banner](documentation/static/pgeasycatalog_banner.png)
+![banner](documentation/static/ookcatalog_banner.png)
 
 ## Description
 
-PGEasyCatalog is a very simple data catalog made for PostgreSQL. It’s been programmed with the philosophy of being
+OokCatalog is a very simple data catalog made for PostgreSQL. It’s been programmed with the philosophy of being
 maintained and/or modified by geomaticians / database administrator and not by web developers. Therefore, it makes the
 simplest use of Python code and SQL requests, and is mostly powered by the SQL comments you have already defined, so it
 can easily be understood.
@@ -41,12 +41,12 @@ These might come later :
 
 - Correctly handle 404 when a table doesn’t exist
 - Warning the administrators of the incoming updates
-- A script to automatically add new tables in `public.pgeasycatalog`, and eventually to remove no-longer existing ones.
+- A script to automatically add new tables in `public.ookcatalog`, and eventually to remove no-longer existing ones.
 - Editing long description and months of update through a web based interface
 
 ### Sreenshots
 
-![](documentation/static/pgeasycatalog_table.png)
+![](documentation/static/ookcatalog_table.png)
 
 ## Installation
 
@@ -54,33 +54,33 @@ These might come later :
 
 #### Creating an access to the database
 
-First, we create a user for pgeasycatalog.
+First, we create a user for ookcatalog.
 
 ```postgresql
-CREATE USER pgeasycatalog WITH PASSWORD 'pgeasycatalog_pass';
+CREATE USER ookcatalog WITH PASSWORD 'ookcatalog_pass';
 ```
 
 Set the password to whichever pass you want. Then, we grant this user access to the same tables our users have access
 to. There are 2 options :
 
 - Grant it the same role as the normal users
-- Or, if your users have writing access and you don’t want PGEasyCatalog to have it, as it could be a threat to your
+- Or, if your users have writing access and you don’t want OokCatalog to have it, as it could be a threat to your
   data integrity, you can grant it usage and select on the same schemas and tables. But it’s longer.
 
 My users have no writing access, so I can give it the same role :
 
 ```postgresql
-GRANT ROLE grp_user_bdu to pgeasycatalog;
+GRANT ROLE grp_user_bdu to ookcatalog;
 ```
 
 #### Setting up its needed data
 
-PGEasyCatalog needs really few thing to work with, a custom enum type and a table.
+OokCatalog needs really few thing to work with, a custom enum type and a table.
 
 The enum type allows registering months. We create it as below :
 
 ```postgresql
-CREATE TYPE pgeasycatalog_month AS ENUM (
+CREATE TYPE ookcatalog_month AS ENUM (
     'Janvier',
     'Février',
     'Mars',
@@ -104,38 +104,38 @@ We then create the table where the catalog will access some data (as of now, lon
 upadte).
 
 ```postgresql
-CREATE TABLE public.pgeasycatalog
+CREATE TABLE public.ookcatalog
 (
     table_schema     TEXT NOT NULL,
     table_name       TEXT NOT NULL,
     description_long TEXT,
-    update_months    PGEASYCATALOG_MONTH[],
+    update_months    OOKCATALOG_MONTH[],
     PRIMARY KEY (table_schema, table_name)
 );
 
-ALTER TABLE public.pgeasycatalog
-    OWNER TO pgeasycatalog;
+ALTER TABLE public.ookcatalog
+    OWNER TO ookcatalog;
 ```
 
-### Deploying PGEasyCatalog
+### Deploying OokCatalog
 
 ### Create a python environment
 
 Create a python environment
 
-With PyPi, install the needed dependencies : flask, psycopg[binaries]
+Download the release and
 
-### Configure PGEasyCatalog
+### Configure OokCatalog
 
 Modify the configuration so the catalog points to your database and your newly created user
 
-Point your webserver to your new PGEasyCatalog
+Point your webserver to your new OokCatalog
 
 That’s it!
 
 ## Usage
 
-You can modify the long description and update months in you new table `public.pgeasycatalog`. You need to manually add
+You can modify the long description and update months in you new table `public.ookcatalog`. You need to manually add
 the tables you want to describe by correctly entering `table_schema` and `table_name` so it matches existing tables.
 
 To enter update_months, you need to use the textual array syntax, for example: `'{Janvier, Mars, Septembre}'`. You need

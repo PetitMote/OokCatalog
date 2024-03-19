@@ -10,9 +10,9 @@ def create_app(test_config=None):
         DATABASE={
             "HOST": "localhost",
             "PORT": "5432",
-            "DBNAME": "pgeasycatalog",
-            "USER": "pgeasycatalog",
-            "PASSWORD": "pgeasycatalog_pass",
+            "DBNAME": "ookcatalog",
+            "USER": "ookcatalog",
+            "PASSWORD": "ookcatalog_pass",
         },
     )
 

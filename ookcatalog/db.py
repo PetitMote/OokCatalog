@@ -24,7 +24,7 @@ def get_db():
         )
         # Registering months Enum information so it’s correctly interpreted by psycopg
         register_enum(
-            EnumInfo.fetch(g.db, "pgeasycatalog_month"),
+            EnumInfo.fetch(g.db, "ookcatalog_month"),
             g.db,
         )
 
@@ -84,7 +84,7 @@ def db_read_informations(db, schema: str, table: str):
             SELECT obj_description(to_regclass(%s)) as description,
             description_long,
             array_agg(update_month order by update_month) as update_months
-            FROM public.pgeasycatalog
+            FROM public.ookcatalog
             CROSS JOIN LATERAL unnest(update_months) as update_month
             WHERE table_schema = (%s) AND table_name = (%s)
             GROUP BY table_schema, table_name, description_long;
@@ -120,7 +120,7 @@ def db_search(db, query: str):
                                coalesce(string_agg(column_name, ' '), '')    as column_names,
                                coalesce(string_agg(column_comment, ' '), '') as column_comments
                         FROM information_schema.tables
-                                 LEFT JOIN public.pgeasycatalog cat
+                                 LEFT JOIN public.ookcatalog cat
                                            on tables.table_schema = cat.table_schema AND tables.table_name = cat.table_name
                                  CROSS JOIN LATERAL (
                             SELECT column_name,

@@ -1,4 +1,4 @@
-CREATE TYPE pgeasycatalog_month AS ENUM (
+CREATE TYPE ookcatalog_month AS ENUM (
     'Janvier',
     'Février',
     'Mars',
@@ -13,12 +13,12 @@ CREATE TYPE pgeasycatalog_month AS ENUM (
     'Décembre'
 );
 
-CREATE TABLE public.pgeasycatalog (
+CREATE TABLE public.ookcatalog (
   table_schema TEXT NOT NULL,
   table_name TEXT NOT NULL,
   description_long TEXT,
-  update_months PGEASYCATALOG_MONTH[],
+  update_months OOKCATALOG_MONTH[],
   PRIMARY KEY (table_schema, table_name)
 );
 
-ALTER TABLE public.pgeasycatalog OWNER TO pgeasycatalog;
+ALTER TABLE public.ookcatalog OWNER TO ookcatalog;
