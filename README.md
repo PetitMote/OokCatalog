@@ -147,7 +147,15 @@ based on the instance folder. That means that the root of the relative path will
 .venv/var/ookcatalog-instance/
 ```
 
-You can export / set the environment variable if desired.
+You can export / set the environment variable if desired, for example on Linux :
+
+```commandline
+export OOKCATALOG_SETTINGS='/absolute/path/to/config.py' server_run_command
+```
+
+I’ve tried on Windows 11 using the `set` command, which didn’t work (either because Windows, or because it needs
+administrator rights but won’t tell you). You might need to set the environment variable through the graphical
+interface.
 
 When launching the WSGI server, pass the OokCatalog app as a parameter. For example, full command with Waitress could
 be :
