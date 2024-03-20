@@ -128,7 +128,7 @@ def db_search(db, query: str):
                             FROM information_schema.columns
                             WHERE columns.table_schema = tables.table_schema
                               AND columns.table_name = tables.table_name
-                            )
+                            ) AS columns
                         WHERE tables.table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
                         GROUP BY tables.table_schema, tables.table_name, description_long) AS tables_strings) AS tables_vectors,
                 websearch_to_tsquery('french', (%s)) AS query
