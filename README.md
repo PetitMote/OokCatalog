@@ -72,7 +72,7 @@ to. There are 2 options :
 My users have no writing access, so I can give it the same role :
 
 ```postgresql
-GRANT ROLE grp_user_bdu to ookcatalog;
+GRANT grp_user_bdu to ookcatalog;
 ```
 
 #### Setting up its needed data
