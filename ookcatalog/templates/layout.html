@@ -23,10 +23,10 @@
                         <form action="{{ url_for('ookcatalog.search') }}" method="get">
                             <div class="field has-addons">
                                 <div class="control">
-                                    <input name="q" required minlength="3" class="input" type="text" placeholder="Trouver une table">
+                                    <input name="q" required minlength="3" class="input" type="text" placeholder="{{ _('Find a table') }}">
                                 </div>
                                 <div class="control">
-                                    <input type="submit" class="button is-primary" value="Rechercher">
+                                    <input type="submit" class="button is-primary" value="{{ _('Search') }}">
                                 </div>
                             </div>
                         </form>

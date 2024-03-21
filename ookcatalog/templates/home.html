@@ -1,12 +1,12 @@
 {% extends 'layout.html' %}
-{% block title %}Schémas{% endblock %}
+{% block title %}{{ _('Schemas') }}{% endblock %}
 {% block content %}
     <div class="block">
         <h1 class="title is-1">{{ config['DATABASE_TITLE'] }}</h1>
-        <p class="subtitle is-3">Catalogue de données</p>
+        <p class="subtitle is-3">{{ _('Data catalog') }}</p>
     </div>
     <div class="block">
-        <h2 class="title is-3">Liste des schémas</h2>
+        <h2 class="title is-3">{{ _('Schema list') }}</h2>
         {% for schema in schemas %}
             <details class="block">
                 <summary class="title is-4">{{ schema }}</summary>
