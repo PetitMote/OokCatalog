@@ -1,5 +1,9 @@
-from flask import Flask
+from flask import Flask, request
+from flask_babel import Babel
 
+
+def get_locale():
+    return request.accept_languages.best_match(['en', 'fr'])
 
 def create_app(test_config=None):
     # Create the app
@@ -22,6 +26,9 @@ def create_app(test_config=None):
     else:
         # load the test config if passed in
         app.config.from_mapping(test_config)
+
+    # Registering Babel
+    babel = Babel(app, locale_selector=get_locale)
 
     # Activate some data functions
     from . import db

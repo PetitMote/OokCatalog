@@ -1,9 +1,9 @@
 {% extends 'layout.html' %}
 
-{% block title %}Recherche{% endblock %}
+{% block title %}{{ _('Search') }}{% endblock %}
 {% block content %}
     <div class="block">
-        <h1 class="title is-1">Résultats de recherche</h1>
+        <h1 class="title is-1">{{ _('Search results') }}</h1>
     </div>
     {% for result in search_results %}
         <div class="block">
