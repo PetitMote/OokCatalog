@@ -15,6 +15,7 @@ classifiers = [
 dependencies = [
     "flask",
     "psycopg[binary]",
+    "Flask-Babel",
 ]
 
 [project.urls]
