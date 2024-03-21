@@ -106,11 +106,11 @@ def db_search(db, query: str):
             """
             SELECT table_schema, table_name, table_comment, ts_rank('{0.2, 0.5, 0.7, 1.0}', vector, query) as rank
             FROM (SELECT *,
-                         setweight(to_tsvector('french', table_name), 'A') ||
-                         setweight(to_tsvector('french', table_comment), 'A') ||
-                         setweight(to_tsvector('french', description_long), 'B') ||
-                         setweight(to_tsvector('french', column_names), 'C') ||
-                         setweight(to_tsvector('french', column_comments), 'C') as vector
+                         setweight(to_tsvector(%(text_search_lang)s, table_name), 'A') ||
+                         setweight(to_tsvector(%(text_search_lang)s, table_comment), 'A') ||
+                         setweight(to_tsvector(%(text_search_lang)s, description_long), 'B') ||
+                         setweight(to_tsvector(%(text_search_lang)s, column_names), 'C') ||
+                         setweight(to_tsvector(%(text_search_lang)s, column_comments), 'C') as vector
                   FROM (SELECT tables.table_schema,
                                tables.table_name,
                                coalesce(obj_description(to_regclass(tables.table_schema || '.' || tables.table_name)),
@@ -131,12 +131,12 @@ def db_search(db, query: str):
                             ) AS columns
                         WHERE tables.table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
                         GROUP BY tables.table_schema, tables.table_name, description_long) AS tables_strings) AS tables_vectors,
-                websearch_to_tsquery('french', (%s)) AS query
+                websearch_to_tsquery(%(text_search_lang)s, (%(query)s)) AS query
             WHERE vector @@ query
             ORDER BY rank DESC
             LIMIT 20;
             """,
-            (query,),
+            {'query': query, 'text_search_lang': current_app.config['TEXT_SEARCH_LANG']},
         )
         # Fetching the result
         search_results = cur.fetchall()
