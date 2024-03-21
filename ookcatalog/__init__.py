@@ -3,7 +3,8 @@ from flask_babel import Babel
 
 
 def get_locale():
-    return request.accept_languages.best_match(['en', 'fr'])
+    return request.accept_languages.best_match(["en", "fr"])
+
 
 def create_app(test_config=None):
     # Create the app
@@ -18,11 +19,12 @@ def create_app(test_config=None):
             "USER": "ookcatalog",
             "PASSWORD": "ookcatalog_pass",
         },
+        TEXT_SEARCH_LANG="english",
     )
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
-        app.config.from_envvar('OOKCATALOG_SETTINGS')
+        app.config.from_envvar("OOKCATALOG_SETTINGS")
     else:
         # load the test config if passed in
         app.config.from_mapping(test_config)
