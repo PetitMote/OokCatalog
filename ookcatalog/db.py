@@ -136,7 +136,10 @@ def db_search(db, query: str):
             ORDER BY rank DESC
             LIMIT 20;
             """,
-            {'query': query, 'text_search_lang': current_app.config['TEXT_SEARCH_LANG']},
+            {
+                "query": query,
+                "text_search_lang": current_app.config["TEXT_SEARCH_LANG"],
+            },
         )
         # Fetching the result
         search_results = cur.fetchall()
