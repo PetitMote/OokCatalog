@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-03-21 21:10+0100\n"
+"POT-Creation-Date: 2024-03-22 22:46+0100\n"
 "PO-Revision-Date: 2024-03-21 21:06+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -17,6 +17,18 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.14.0\n"
+
+#: ookcatalog/cron.py:20
+msgid "# This month updates:"
+msgstr "# Mises à jour du mois :"
+
+#: ookcatalog/cron.py:34
+msgid "# Last month updates:"
+msgstr "# Mises à jour du mois dernier :"
+
+#: ookcatalog/cron.py:50
+msgid "# Next month updates:"
+msgstr "# Mises à jour du mois prochain :"
 
 #: ookcatalog/templates/home.html:2
 msgid "Schemas"
