@@ -22,9 +22,10 @@ def get_db():
             row_factory=dict_row,
         )
         # Registering months Enum information so it’s correctly interpreted by psycopg
+        g.db_enum_months = EnumInfo.fetch(g.db, "ookcatalog_month")
         register_enum(
-            EnumInfo.fetch(g.db, "ookcatalog_month"),
-            g.db,
+            g.db_enum_months,
+            context=g.db,
         )
 
     return g.db
@@ -144,3 +145,23 @@ def db_search(db, query: str):
         # Fetching the result
         search_results = cur.fetchall()
         return search_results
+
+
+def db_tables_updating(db, month: int) -> list[dict]:
+    # Getting back the enum
+    Months = g.db_enum_months.enum
+    # Getting month label
+    month_label = Months(month).name
+    with db.cursor() as cur:
+        cur.execute(  # Getting all the tables updating on that month
+            """
+            SELECT table_schema, table_name
+            FROM public.ookcatalog
+            WHERE update_months::text[] && ARRAY [(%s)]
+            ORDER BY table_schema, table_name
+            """,
+            (month_label,),
+        )
+        # Fetching the result
+        tables_updating = cur.fetchall()
+        return tables_updating

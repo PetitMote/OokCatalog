@@ -1,9 +1,12 @@
 from flask import Flask, request
 from flask_babel import Babel
+from locale import getlocale
 
 
 def get_locale():
-    return request.accept_languages.best_match(["en", "fr"])
+    if request:
+        return request.accept_languages.best_match(["en", "fr"])
+    return getlocale()[0]
 
 
 def create_app(test_config=None):
@@ -38,8 +41,9 @@ def create_app(test_config=None):
     db.init_app(app)
 
     # Register ookcatalog consulting views
-    from . import catalog
+    from . import catalog, cron
 
     app.register_blueprint(catalog.bp)
+    app.register_blueprint(cron.bp)
 
     return app
