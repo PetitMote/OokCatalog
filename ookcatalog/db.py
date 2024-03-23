@@ -184,5 +184,7 @@ def db_catalog_retrieve_tables(db) -> list[dict]:
             ORDER BY table_schema, table_name;
             """
         )
-        tables_inserted = cur.fetchall()  # Execute the query and retrieve the list of inserted tables
+        tables_inserted = (
+            cur.fetchall()
+        )  # Execute the query and retrieve the list of inserted tables
         return tables_inserted
