@@ -44,6 +44,6 @@ def create_app(test_config=None):
     from . import catalog, commands
 
     app.register_blueprint(catalog.bp)
-    app.register_blueprint(cron.bp)
+    app.register_blueprint(commands.bp)
 
     return app

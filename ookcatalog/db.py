@@ -187,4 +187,5 @@ def db_catalog_retrieve_tables(db) -> list[dict]:
         tables_inserted = (
             cur.fetchall()
         )  # Execute the query and retrieve the list of inserted tables
+        db.commit()  # We need to commit the transaction so changes are applied
         return tables_inserted
