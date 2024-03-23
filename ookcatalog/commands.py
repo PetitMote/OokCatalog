@@ -2,11 +2,12 @@ from flask import Blueprint
 from ookcatalog.db import (
     get_db,
     db_tables_updating,
+    db_catalog_retrieve_tables,
 )
 from datetime import date, timedelta
 from flask_babel import gettext as _
 
-bp = Blueprint("cron", __name__)
+bp = Blueprint("commands", __name__)
 
 
 @bp.cli.command("tables-updating")
@@ -55,3 +56,12 @@ def tables_updating():
         tables_updating_text += "\n\n" + text  # Putting temporary text in result text
 
     print(tables_updating_text)  # Printing the result as this is a CLI command
+
+
+@bp.cli.command("update-tables-catalog")
+def update_tables_catalog():
+    db = get_db()
+    tables_inserted = db_catalog_retrieve_tables(db)
+    print(_("# Tables inserted in public.ookcatalog:"))
+    for table in tables_inserted:
+        print(f"{table['table_schema']}.{table['table_name']}")

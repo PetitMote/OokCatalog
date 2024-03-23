@@ -41,9 +41,9 @@ def create_app(test_config=None):
     db.init_app(app)
 
     # Register ookcatalog consulting views
-    from . import catalog, cron
+    from . import catalog, commands
 
     app.register_blueprint(catalog.bp)
-    app.register_blueprint(cron.bp)
+    app.register_blueprint(commands.bp)
 
     return app

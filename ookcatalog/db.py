@@ -165,3 +165,27 @@ def db_tables_updating(db, month: int) -> list[dict]:
         # Fetching the result
         tables_updating = cur.fetchall()
         return tables_updating
+
+
+def db_catalog_retrieve_tables(db) -> list[dict]:
+    with db.cursor() as cur:
+        cur.execute(  # PostgreSQL request to insert all tables in the catalog, returning these tables
+            """
+            WITH inserted AS (INSERT INTO public.ookcatalog (table_schema, table_name)
+                SELECT tables.table_schema, tables.table_name
+                FROM information_schema.tables
+                         LEFT JOIN public.ookcatalog AS cat
+                                   ON tables.table_schema = cat.table_schema AND tables.table_name = cat.table_name
+                WHERE tables.table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
+                  AND cat.table_schema is null
+                RETURNING table_schema, table_name)
+            SELECT *
+            FROM inserted
+            ORDER BY table_schema, table_name;
+            """
+        )
+        tables_inserted = (
+            cur.fetchall()
+        )  # Execute the query and retrieve the list of inserted tables
+        db.commit()  # We need to commit the transaction so changes are applied
+        return tables_inserted
