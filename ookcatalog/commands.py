@@ -3,6 +3,9 @@ from ookcatalog.db import (
     get_db,
     db_tables_updating,
     db_catalog_retrieve_tables,
+    db_tables_missing_comment,
+    db_tables_with_columns_missing_comment,
+    db_tables_missing_ookcatalog_details,
 )
 from datetime import date, timedelta
 from flask_babel import gettext as _
@@ -64,4 +67,18 @@ def update_tables_catalog():
     tables_inserted = db_catalog_retrieve_tables(db)
     print(_("# Tables inserted in public.ookcatalog:"))
     for table in tables_inserted:
+        print(f"{table['table_schema']}.{table['table_name']}")
+
+
+@bp.cli.command("tables-missing-comments")
+def get_tables_missing_comments():
+    db = get_db()
+    print(_("# Tables missing comments:"))
+    for table in db_tables_missing_comment(db):
+        print(f"{table['table_schema']}.{table['table_name']}")
+    print(_("\n# Tables with column missing comments:"))
+    for table in db_tables_with_columns_missing_comment(db):
+        print(f"{table['table_schema']}.{table['table_name']}")
+    print(_("\n# Tables missing OokCatalog details:"))
+    for table in db_tables_missing_ookcatalog_details(db):
         print(f"{table['table_schema']}.{table['table_name']}")
