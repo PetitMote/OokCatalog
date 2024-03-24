@@ -1,4 +1,6 @@
-from flask import Blueprint
+import click
+from ookcatalog import create_app
+from flask.cli import FlaskGroup
 from ookcatalog.db import (
     get_db,
     db_tables_updating,
@@ -10,11 +12,14 @@ from ookcatalog.db import (
 from datetime import date, timedelta
 from flask_babel import gettext as _
 
-bp = Blueprint("commands", __name__)
+@click.group(cls=FlaskGroup, create_app=create_app)
+def cli():
+    pass
 
 
-@bp.cli.command("tables-updating")
+@cli.command("tables-updating")
 def tables_updating():
+    """List tables updating this month and last or next month."""
     today = date.today()  # Getting today’s date
     tables_updating = {}  # Container for results
     db = get_db()
@@ -61,8 +66,9 @@ def tables_updating():
     print(tables_updating_text)  # Printing the result as this is a CLI command
 
 
-@bp.cli.command("update-tables-catalog")
+@cli.command("update-tables-catalog")
 def update_tables_catalog():
+    """Insert existing tables in public.ookcatalog so you can set their information."""
     db = get_db()
     tables_inserted = db_catalog_retrieve_tables(db)
     print(_("# Tables inserted in public.ookcatalog:"))
@@ -70,8 +76,9 @@ def update_tables_catalog():
         print(f"{table['table_schema']}.{table['table_name']}")
 
 
-@bp.cli.command("tables-missing-comments")
+@cli.command("tables-missing-comments")
 def get_tables_missing_comments():
+    """List tables missing a comment on them or on one of their columns."""
     db = get_db()
     print(_("# Tables missing comments:"))
     for table in db_tables_missing_comment(db):
