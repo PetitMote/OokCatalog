@@ -129,3 +129,15 @@ correctly input `table_schema` and `table_name` fields.
 
 You should launch this command first after having installed OokCatalog, so you can start writing long descriptions and
 filling update months. After that, you only need to launch it after adding new tables to your database.
+
+## Contributing
+
+Contributing is welcomed even though I haven’t prepared a contribution workflow for now.
+
+A few things to know:
+
+- By contributing, you accept to publish your code under the MIT license
+- I use Black default formatting
+
+I haven’t set up a translation tool yet. If you wish to translate OokCatalog, and don’t know how to do it with the
+source code and pybabel, please contact me so I can make it as easy as possible for you.
