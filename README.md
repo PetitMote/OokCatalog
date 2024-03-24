@@ -87,3 +87,45 @@ To enter update_months, you need to use the textual array syntax, for example: `
 to single quote the whole array and not individual months. Be wary that this is case-sensitive (`Janvier != janvier`).
 
 ### Command-line interface
+
+OokCatalog packs a command-line interface for useful commands. Running `ookcatalog` without any argument will display a
+list of the available commands.
+
+> [!IMPORTANT]
+> Launching OokCatalog commands still needs the setting environment variable to be set. We will omit it from the
+> commands, like if it was exported as a permanent environment variable.
+> See [INSTALLATION](documentation/INSTALLATION.md)
+> for more details.
+
+```commandline
+ookcatalog tables-missing-comments
+```
+
+This command displays the list of all tables where description isn’t complete. It looks for table comment, column
+comments, and for OokCatalog specific descriptions (in `public.catalog`), so long description and update months.
+
+You can set up a cron task that would regularly check for missing descriptions and email you for details, or simply
+lanch the command when needed.
+
+```commandline
+ookcatalog tables-updating
+```
+
+This command displays the list of tables that should update this month, based on what you inputted
+in `public.ookcatalog.update_months`. It’ll also add:
+
+- If launched between the 1st and 10th day of the month, the updates of the last month
+- If launched between the 21st and the last day of the month, the updates coming the next month
+
+I advise to set up a regular cron job that will warn you of updates (this being the goal of this command). You don’t
+need to have it run everyday, but it could be on the first, 15th and 25th day of each month.
+
+```commandline
+ookcatalog update-tables-catalog
+```
+
+This command will update the `public.ookcatalog`, filling it with the tables that weren’t already inserted. It’ll
+correctly input `table_schema` and `table_name` fields.
+
+You should launch this command first after having installed OokCatalog, so you can start writing long descriptions and
+filling update months. After that, you only need to launch it after adding new tables to your database.
