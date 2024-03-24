@@ -18,6 +18,9 @@ dependencies = [
     "Flask-Babel",
 ]
 
+[project.scripts]
+ookcatalog = "ookcatalog.commands:cli"
+
 [project.urls]
 Homepage = "https://github.com/PetitMote/OokCatalog"
 Issues = "https://github.com/PetitMote/OokCatalog/issues"
