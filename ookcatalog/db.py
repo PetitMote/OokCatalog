@@ -189,3 +189,60 @@ def db_catalog_retrieve_tables(db) -> list[dict]:
         )  # Execute the query and retrieve the list of inserted tables
         db.commit()  # We need to commit the transaction so changes are applied
         return tables_inserted
+
+
+def db_tables_missing_comment(db) -> list[dict]:
+    with db.cursor() as cur:
+        cur.execute(  # PostgreSQL request to get table without a comment
+            """
+            SELECT table_schema,
+                   table_name
+            FROM information_schema.tables
+            WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
+              AND obj_description(to_regclass(table_schema || '.' || table_name)) IS NULL
+            ORDER BY table_schema, table_name
+            """
+        )
+        tables_missing_comment = (
+            cur.fetchall()
+        )  # Execute the query and fetch the result
+        return tables_missing_comment
+
+
+def db_tables_with_columns_missing_comment(db) -> list[dict]:
+    with db.cursor() as cur:
+        cur.execute(
+            """
+            SELECT table_schema,
+                   table_name
+            FROM information_schema.columns
+            WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
+              AND col_description(to_regclass(table_schema || '.' || table_name), ordinal_position) IS NULL
+            GROUP BY table_schema, table_name
+            ORDER BY table_schema, table_name
+            """
+        )
+        tables_with_columns_missing_comment = (
+            cur.fetchall()
+        )  # Execute the query and fetch the result
+        return tables_with_columns_missing_comment
+
+
+def db_tables_missing_ookcatalog_details(db) -> list[dict]:
+    with db.cursor() as cur:
+        cur.execute(
+            """
+            SELECT tables.table_schema,
+                   tables.table_name
+            FROM information_schema.tables
+                     LEFT JOIN public.ookcatalog cat
+                               ON tables.table_schema = cat.table_schema AND tables.table_name = cat.table_name
+            WHERE tables.table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
+              AND (cat.description_long IS NULL OR cat.update_months IS NULL)
+            ORDER BY table_schema, table_name;
+            """
+        )
+        tables_missing_ookcatalog_details = (
+            cur.fetchall()
+        )  # Execute the query and fetch the result
+        return tables_missing_ookcatalog_details
