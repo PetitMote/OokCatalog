@@ -1,15 +1,33 @@
+"""Database interface for Ookcatalog
+
+Holds database connection and every database request.
+"""
+
 import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.enum import EnumInfo, register_enum
 from flask import current_app, g
 
 
-def init_app(app):
+def init_app(app) -> None:
+    """Execute DB related code at the initialization of the Flask app.
+
+    For now, it only registers a function that need to be called at the end of each request.
+    :param app: Flask app that is starting
+    """
     # Register the close_db function so it’s called at the end of each request
     app.teardown_appcontext(close_db)
 
 
-def get_db():
+def get_db() -> psycopg.Connection:
+    """Establish a psycopg connection to the database.
+
+    Use the parameters set in OokCatalog config to establish the connection. Save the connection in the `g` object of
+    the request context.
+
+    Also fetch the custom ookcatalog_month enum type and save it in the `g` object.
+    :return: psycopg 3 connection to the database
+    """
     if "db" not in g:
         g.db = psycopg.connect(
             f"""
@@ -31,14 +49,24 @@ def get_db():
     return g.db
 
 
-def close_db(e=None):
+def close_db(e=None) -> None:
+    """Close the database connection if still existing.
+
+    This function is registered to the Flask app (see `init_app`) so it’s called at the end of each request.
+    """
     db = g.pop("db", None)
 
     if db is not None:
         db.close()
 
 
-def db_read_schema(db):
+def db_read_schema(db) -> dict:
+    """Read schemas list and associated tables from database.
+
+    The SQL request pulls the information from information_schema.tables and aggregates the tables in an array.
+    :param db: database connection, it should be the one returned by `get_db()`
+    :return: a dictionary with keys being the name of the schema and values being the list of tables inside this schema
+    """
     with db.cursor() as cur:
         # Reading the schemas from the information schema
         cur.execute(
@@ -55,7 +83,20 @@ def db_read_schema(db):
         return schemas
 
 
-def db_read_columns(db, schema: str, table: str):
+def db_read_columns(db, schema: str, table: str) -> list[dict]:
+    """Read columns name, type and comment for a given schema and table.
+
+    Given the schema and table names, will list and describe every column of that table. It won’t check the given
+    values, if the database user hasn’t access to it or the table doesn’t exist, it will return empty values.
+
+    The SQL request pulls the information from `information_schema.columns`. For the description, or column comment, it
+    makes use of the `col_description()` function of PostgreSQL.
+    :param db: database connection, it should be the one returned by `get_db()`
+    :param schema: schema name of the table to look up
+    :param table: name of the table to look up
+    :return: a list of rows, each row being a dictionary with the following keys: `column_name`, `data_type`,
+        `description`
+    """
     with db.cursor() as cur:
         # Reading the table columns from the information schema
         cur.execute(
@@ -76,7 +117,23 @@ def db_read_columns(db, schema: str, table: str):
         return columns
 
 
-def db_read_informations(db, schema: str, table: str):
+def db_read_informations(db, schema: str, table: str) -> dict:
+    """Read table description and OokCatalog specific descriptions for a given schema and table.
+
+    Given the schema and table names, will retrieve its comment / description, and OokCatalago special descriptions of
+    that table stored in `public.ookcatalog`. It won’t check the given values, if the database user hasn’t access to it
+    or the table doesn’t exist, it will return empty values
+
+    The SQL request pulls the information from `public.ookcatalog`. For the description, or column comment, it
+    makes use of the `obj_description()` function of PostgreSQL.
+
+    Today, only two things are stored in `public.ookcatalog`: a long description and the update months.
+    :param db: database connection, it should be the one returned by `get_db()`
+    :param schema: schema name of the table to look up
+    :param table: name of the table to look up
+    :return: a dictionary with the following keys: `description`, `description_long`, `update_months` - update_months
+        are sorted in calendar order
+    """
     with db.cursor() as cur:
         # Reading the table information from the ookcatalog table
         cur.execute(
@@ -100,7 +157,43 @@ def db_read_informations(db, schema: str, table: str):
         return table_informations
 
 
-def db_search(db, query: str):
+def db_search(db, query: str) -> list[dict]:
+    """Search (textual search) the table names and descriptions for the given query using database search capabilities.
+
+    With the given query, this function will perform a more complex SQL request than the others:
+        1. From all tables, get the schema name, table name, and table comment
+        2. Join OokCatalog information from `public.ookcatalog` to select the long description
+        3. Cross join lateral (with a sub-request) the column names and column comments and aggregate them in strings
+        4. From all that, prepare the tsvector for the text search, assigning weights for each field and concatenating all of the tsvector
+        5. Prepare and join the query with `websearch_to_query()` (so it really needs `query` to be formatted as a web query)
+        6. Compare the tsvectors and the prepared query, this is when the query actually happens. It gives a score to each table, and ranks them.
+
+    One really important thing to know is that all the potential impact of OokCatalog is probably here. For each search,
+    it’ll ask PostgreSQL to process table names and descriptions (and all the rest) again, because the vectors aren’t
+    stored in database (as this would need complex triggers on the database to keep up to date). It shouldn’t have a
+    significant impact since it isn’t much text and OokCatalog isn’t made for thousands of users.
+
+    The app config is used to get the TEXT_SEARCH_LANG setting. This is the lang used for the text search, and is very
+    important so PostgreSQL interprets both the table descriptions and the query correctly. It’s injected several times,
+    when we create the tsvectors and when we prepare the query. Note that it’s not a locale code but a full name.
+
+    It’s possible to tweak the weighting of the text search to get better results.
+        When creating the tsvectors, we give them a category with a letter, A being the most important and D the less
+        important. We can change this based on the importance we give to each element. If you think the column names are
+        more important, you can give them the 'B' category.
+
+        Then, there are the weights attributed to each category. It’s the first argument of the `ts_rank()` function. It
+        takes the form of an array, the first element being the weight for the D category and the last for the A
+        category (so, from less important to most important). You can alter these weights, to give more or less
+        importance to a category. For example, if you want to give an even greater importance to the table name and
+        comment, you could inpute '{0.2, 0.5, 0.7, 1.3}'. There are no generic answer for these values.
+
+    :param db: database connection, it should be the one returned by `get_db()`
+    :param query: textual search query, formatted as an HTTP GET parameter (the part after the `q=` in
+        `https://example.com?q=query`)
+    :return: a list of tables, most pertinent first, each table being a dictionary with the following keys:
+        `table_schema`, `table_name`, `table_comment`, `rank``
+    """
     with db.cursor() as cur:
         # Searching for tables matching the query
         cur.execute(
@@ -123,13 +216,13 @@ def db_search(db, query: str):
                                  LEFT JOIN public.ookcatalog cat
                                            on tables.table_schema = cat.table_schema AND tables.table_name = cat.table_name
                                  CROSS JOIN LATERAL (
-                            SELECT column_name,
-                                   col_description(to_regclass(table_schema || '.' || table_name),
-                                                   ordinal_position) as column_comment
-                            FROM information_schema.columns
-                            WHERE columns.table_schema = tables.table_schema
-                              AND columns.table_name = tables.table_name
-                            ) AS columns
+                                    SELECT column_name,
+                                           col_description(to_regclass(table_schema || '.' || table_name),
+                                                           ordinal_position) as column_comment
+                                    FROM information_schema.columns
+                                    WHERE columns.table_schema = tables.table_schema
+                                      AND columns.table_name = tables.table_name
+                                    ) AS columns
                         WHERE tables.table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
                         GROUP BY tables.table_schema, tables.table_name, description_long) AS tables_strings) AS tables_vectors,
                 websearch_to_tsquery(%(text_search_lang)s, (%(query)s)) AS query
@@ -148,6 +241,16 @@ def db_search(db, query: str):
 
 
 def db_tables_updating(db, month: int) -> list[dict]:
+    """Get the tables updating in the given month, from OokCatalog table.
+
+    This function gets back the enum from `g.db_enum_months` so it can translate the month number to the label as
+    defined in the ENUM TYPE at the set-up of the database. The SQL request checks the presence of that month in the
+    update_months array of `public.ookcatalog`.
+    :param db: database connection, it should be the one returned by `get_db()`
+    :param month: month number, from 1 (january) to 12 (december)
+    :return: a list of dictionaries, with the two values `table_schema` and `table_name`. The list is sorted by schema
+        and table name
+    """
     # Getting back the enum
     Months = g.db_enum_months.enum
     # Getting month label
@@ -168,6 +271,16 @@ def db_tables_updating(db, month: int) -> list[dict]:
 
 
 def db_catalog_retrieve_tables(db) -> list[dict]:
+    """Retrieve missing tables in `public.ookcatalog`.
+
+    This function will list all tables in the database (that the configured user has access to) and insert those which
+    aren’t already in the `public.ookcatalog` table. This avoids typos, or allows to easily insert a lot of tables.
+
+    The function will commit after that.
+    :param db: database connection, it should be the one returned by `get_db()`
+    :return: a list of the inserted tables, ordered by table_schema and table_name, each table being a dictionary with
+        the `table_schema` and `table_name` values.
+    """
     with db.cursor() as cur:
         cur.execute(  # PostgreSQL request to insert all tables in the catalog, returning these tables
             """
@@ -192,6 +305,12 @@ def db_catalog_retrieve_tables(db) -> list[dict]:
 
 
 def db_tables_missing_comment(db) -> list[dict]:
+    """Retrieve tables without a table comment / description.
+
+    :param db: database connection, it should be the one returned by `get_db()`
+    :return: a list of tables, ordered by schema and table name, each table being a dictionary with the following keys:
+        `table_schema`, `table_name`
+    """
     with db.cursor() as cur:
         cur.execute(  # PostgreSQL request to get table without a comment
             """
@@ -210,6 +329,12 @@ def db_tables_missing_comment(db) -> list[dict]:
 
 
 def db_tables_with_columns_missing_comment(db) -> list[dict]:
+    """Retrieve tables with a column without comment / description.
+
+    :param db: database connection, it should be the one returned by `get_db()`
+    :return: a list of tables, ordered by schema and table name, each table being a dictionary with the following keys:
+        `table_schema`, `table_name`
+    """
     with db.cursor() as cur:
         cur.execute(
             """
@@ -229,6 +354,12 @@ def db_tables_with_columns_missing_comment(db) -> list[dict]:
 
 
 def db_tables_missing_ookcatalog_details(db) -> list[dict]:
+    """Retrieve tables without long description or update months (from `public.ookcatalog`).
+
+    :param db: database connection, it should be the one returned by `get_db()`
+    :return: a list of tables, ordered by schema and table name, each table being a dictionary with the following keys:
+        `table_schema`, `table_name`
+    """
     with db.cursor() as cur:
         cur.execute(
             """
