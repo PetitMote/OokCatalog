@@ -6,6 +6,7 @@ authors = [
 ]
 description = "Light and hassle-free PostgreSQL data catalog"
 readme = "README.md"
+licens = {file = "LICENSE.txt"}
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
