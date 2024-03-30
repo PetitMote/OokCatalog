@@ -124,7 +124,7 @@ def db_read_informations(db, schema: str, table: str) -> dict:
     that table stored in `public.ookcatalog`. It won’t check the given values, if the database user hasn’t access to it
     or the table doesn’t exist, it will return empty values
 
-    The SQL request pulls the information from `public.ookcatalog`. For the description, or column comment, it
+    The SQL request pulls the information from `public.ookcatalog`. For the description, or table comment, it
     makes use of the `obj_description()` function of PostgreSQL.
 
     Today, only two things are stored in `public.ookcatalog`: a long description and the update months.
@@ -138,13 +138,11 @@ def db_read_informations(db, schema: str, table: str) -> dict:
         # Reading the table information from the ookcatalog table
         cur.execute(
             """
-            SELECT obj_description(to_regclass(%s)) as description,
-            description_long,
-            array_agg(update_month order by update_month) as update_months
-            FROM public.ookcatalog
-            CROSS JOIN LATERAL unnest(update_months) as update_month
-            WHERE table_schema = (%s) AND table_name = (%s)
-            GROUP BY table_schema, table_name, description_long;
+            SELECT description, description_long, array_agg(updates.month) AS update_months
+            FROM (VALUES (obj_description(to_regclass((%s))))) AS table_comment (description)
+                     LEFT JOIN public.ookcatalog AS details ON details.table_schema = (%s) AND details.table_name = (%s)
+                     LEFT JOIN LATERAL (SELECT DISTINCT unnest(update_months) AS month ORDER BY month) AS updates ON TRUE
+            GROUP BY description, description_long
             """,
             (
                 f"{schema}.{table}",
