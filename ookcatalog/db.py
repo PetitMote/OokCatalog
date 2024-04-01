@@ -145,7 +145,7 @@ def db_read_informations(db, schema: str, table: str) -> dict:
         cur.execute(
             """
             SELECT description, description_long, array_agg(updates.month) AS update_months
-            FROM (VALUES (obj_description(to_regclass((%s))))) AS table_comment (description)
+            FROM (VALUES (obj_description(to_regclass((%s)), 'pg_class'))) AS table_comment (description)
                      LEFT JOIN public.ookcatalog AS details ON details.table_schema = (%s) AND details.table_name = (%s)
                      LEFT JOIN LATERAL (SELECT DISTINCT unnest(update_months) AS month ORDER BY month) AS updates ON TRUE
             GROUP BY description, description_long
@@ -211,8 +211,8 @@ def db_search(db, query: str) -> list[dict]:
                          setweight(to_tsvector(%(text_search_lang)s, column_comments), 'C') as vector
                   FROM (SELECT tables.table_schema,
                                tables.table_name,
-                               coalesce(obj_description(to_regclass(tables.table_schema || '.' || tables.table_name)),
-                                        '')                                  AS table_comment,
+                               coalesce(obj_description(to_regclass(tables.table_schema || '.' || tables.table_name),
+                               'pg_class'), '')                              AS table_comment,
                                coalesce(cat.description_long, '')            AS description_long,
                                coalesce(string_agg(column_name, ' '), '')    as column_names,
                                coalesce(string_agg(column_comment, ' '), '') as column_comments
@@ -322,7 +322,7 @@ def db_tables_missing_comment(db) -> list[dict]:
                    table_name
             FROM information_schema.tables
             WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
-              AND obj_description(to_regclass(table_schema || '.' || table_name)) IS NULL
+              AND obj_description(to_regclass(table_schema || '.' || table_name), 'pg_class') IS NULL
             ORDER BY table_schema, table_name
             """
         )
