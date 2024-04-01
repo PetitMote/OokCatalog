@@ -65,20 +65,26 @@ def db_read_schema(db) -> dict:
 
     The SQL request pulls the information from information_schema.tables and aggregates the tables in an array.
     :param db: database connection, it should be the one returned by `get_db()`
-    :return: a dictionary with keys being the name of the schema and values being the list of tables inside this schema
+    :return: a list of all schemas in the database. Each schema is a dictionary with the following keys: 'schema_name',
+    'schema_description' (schema comment), 'tables'. 'tables' is a list of all tables in the schema, and each table is a
+    list with two values: the table name, and the table comment/description.
     """
     with db.cursor() as cur:
         # Reading the schemas from the information schema
         cur.execute(
             """
-        SELECT table_schema as schema_name, array_agg(table_name order by table_name)::text[] as tables
-        FROM information_schema.tables
-        WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
-        GROUP BY schema_name
-        ORDER BY schema_name;"""
+            SELECT table_schema                                                   as schema_name,
+                   obj_description(to_regnamespace(table_schema), 'pg_namespace') as schema_description,
+                   array_agg(array [table_name, obj_description(to_regclass(table_schema || '.' || table_name), 'pg_class')]
+                             order by table_name)::text[][]                       as tables
+            FROM information_schema.tables
+            WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
+            GROUP BY schema_name
+            ORDER BY schema_name;
+            """
         )
         # Fetching the result
-        schemas = {schema["schema_name"]: schema["tables"] for schema in cur.fetchall()}
+        schemas = cur.fetchall()
         # Sending back the result
         return schemas
 
