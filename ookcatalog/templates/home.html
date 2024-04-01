@@ -8,13 +8,30 @@
     <div class="block">
         <h2 class="title is-3">{{ _('Schema list') }}</h2>
         {% for schema in schemas %}
-            <details class="block">
-                <summary class="title is-4">{{ schema }}</summary>
-                <ul>
-                    {% for table in schemas[schema] %}
-                        <li><a href="{{ url_for('ookcatalog.table', schema=schema, table=table) }}">{{ table }}</a></li>
-                    {% endfor %}
-                </ul>
+            <details class="card block">
+                <summary class="card-header">
+                    <div class="card-header-title">
+                        <p>
+                            <strong class="title is-5">{{ schema['schema_name'] }} </strong>
+                            <span class="subtitle is-5">{{ schema['schema_description'] }}</span>
+                        </p>
+                    </div>
+                </summary>
+                <div class="card-content">
+                    <div class="fixed-grid has-3-cols">
+                        <div class="grid">
+                            {% for table in schema['tables'] %}
+                                <a class="cell button"
+                                   href="{{ url_for('ookcatalog.table', schema=schema['schema_name'], table=table[0]) }}">
+                                    {{ table[0] }}
+                                </a>
+                                <p class="cell is-col-span-2">
+                                    {{ table[1] if table[1] else "Pas de description" }}
+                                </p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
             </details>
         {% endfor %}
     </div>
