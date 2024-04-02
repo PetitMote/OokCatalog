@@ -75,7 +75,8 @@ def db_read_schema(db) -> dict:
             """
             SELECT table_schema                                                   as schema_name,
                    obj_description(to_regnamespace(table_schema), 'pg_namespace') as schema_description,
-                   array_agg(array [table_name, obj_description(to_regclass(table_schema || '.' || table_name), 'pg_class')]
+                   array_agg(array [table_name::text,
+                                    obj_description(to_regclass(table_schema || '.' || table_name), 'pg_class')::text]
                              order by table_name)::text[][]                       as tables
             FROM information_schema.tables
             WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
