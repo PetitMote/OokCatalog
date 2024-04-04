@@ -63,7 +63,7 @@ def close_db(e=None) -> None:
 def db_read_schema(db) -> dict:
     """Read schemas list and associated tables from database.
 
-    The SQL request pulls the information from information_schema.tables and aggregates the tables in an array.
+    The SQL request pulls the information from pg_catalog.pg_class and aggregates the tables in an array.
     :param db: database connection, it should be the one returned by `get_db()`
     :return: a list of all schemas in the database. Each schema is a dictionary with the following keys: 'schema_name',
     'schema_description' (schema comment), 'tables'. 'tables' is a list of all tables in the schema, and each table is a
@@ -73,12 +73,21 @@ def db_read_schema(db) -> dict:
         # Reading the schemas from the information schema
         cur.execute(
             """
-            SELECT table_schema                                                   as schema_name,
-                   obj_description(to_regnamespace(table_schema), 'pg_namespace') as schema_description,
+            WITH tables as
+                     (SELECT nspname AS table_schema, relname AS table_name
+                      FROM pg_catalog.pg_class
+                               INNER JOIN pg_catalog.pg_namespace ON pg_class.relnamespace = pg_namespace.oid
+                      WHERE relpersistence = 'p'
+                        AND relkind in ('r', 'v', 'm', 'f', 'p')
+                        AND has_table_privilege(pg_class.oid, 'select'))
+            SELECT table_schema                                                   AS schema_name,
+                   obj_description(to_regnamespace(table_schema), 'pg_namespace') AS schema_description,
                    array_agg(array [table_name::text,
-                                    obj_description(to_regclass(table_schema || '.' || table_name), 'pg_class')::text]
-                             order by table_name)::text[][]                       as tables
-            FROM information_schema.tables
+                                 obj_description(
+                                         to_regclass(table_schema || '.' || table_name),
+                                         'pg_class')::text]
+                             order by table_name)::text[][]                       AS tables
+            FROM tables
             WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
             GROUP BY schema_name
             ORDER BY schema_name;
@@ -96,7 +105,7 @@ def db_read_columns(db, schema: str, table: str) -> list[dict]:
     Given the schema and table names, will list and describe every column of that table. It won’t check the given
     values, if the database user hasn’t access to it or the table doesn’t exist, it will return empty values.
 
-    The SQL request pulls the information from `information_schema.columns`. For the description, or column comment, it
+    The SQL request pulls the information from `pg_catalog.pg_attribute`. For the description, or column comment, it
     makes use of the `col_description()` function of PostgreSQL.
     :param db: database connection, it should be the one returned by `get_db()`
     :param schema: schema name of the table to look up
@@ -108,9 +117,22 @@ def db_read_columns(db, schema: str, table: str) -> list[dict]:
         # Reading the table columns from the information schema
         cur.execute(
             """
+            WITH columns AS (SELECT pg_namespace.nspname AS table_schema,
+                                    pg_class.relname     AS table_name,
+                                    attname              AS column_name,
+                                    pg_type.typname      AS data_type,
+                                    attnum               AS ordinal_position
+                             FROM pg_catalog.pg_attribute
+                                      INNER JOIN pg_catalog.pg_class ON pg_attribute.attrelid = pg_class.oid
+                                      INNER JOIN pg_catalog.pg_namespace ON pg_class.relnamespace = pg_namespace.oid
+                                      INNER JOIN pg_catalog.pg_type ON pg_attribute.atttypid = pg_type.oid
+                             WHERE pg_class.relkind in ('r', 'v', 'm', 'f', 'p') -- Only get tables attributes, not index or others
+                               AND attnum >= 1 -- Get only columns and not other attributes
+            )
             SELECT column_name, data_type, col_description(to_regclass(%s), ordinal_position) as description
-            FROM information_schema.columns
-            WHERE table_schema = (%s) AND table_name = (%s)
+            FROM columns
+            WHERE table_schema = (%s)
+              AND table_name = (%s)
             ORDER BY ordinal_position;
             """,
             (
@@ -203,6 +225,24 @@ def db_search(db, query: str) -> list[dict]:
         # Searching for tables matching the query
         cur.execute(
             """
+            WITH tables AS (SELECT nspname AS table_schema, relname AS table_name
+                            FROM pg_catalog.pg_class
+                                     INNER JOIN pg_catalog.pg_namespace ON pg_class.relnamespace = pg_namespace.oid
+                            WHERE relpersistence = 'p'
+                              AND relkind in ('r', 'v', 'm', 'f', 'p')
+                              AND has_table_privilege(pg_class.oid, 'select')),
+                 columns AS (SELECT pg_namespace.nspname AS table_schema,
+                                    pg_class.relname     AS table_name,
+                                    attname              AS column_name,
+                                    pg_type.typname      AS data_type,
+                                    attnum               AS ordinal_position
+                             FROM pg_catalog.pg_attribute
+                                      INNER JOIN pg_catalog.pg_class ON pg_attribute.attrelid = pg_class.oid
+                                      INNER JOIN pg_catalog.pg_namespace ON pg_class.relnamespace = pg_namespace.oid
+                                      INNER JOIN pg_catalog.pg_type ON pg_attribute.atttypid = pg_type.oid
+                             WHERE pg_class.relkind in ('r', 'v', 'm', 'f', 'p') -- Only get tables attributes, not index or others
+                               AND attnum >= 1 -- Get only columns and not other attributes
+                 )
             SELECT table_schema, table_name, table_comment, ts_rank('{0.2, 0.5, 0.7, 1.0}', vector, query) as rank
             FROM (SELECT *,
                          setweight(to_tsvector(%(text_search_lang)s, table_name), 'A') ||
@@ -217,14 +257,14 @@ def db_search(db, query: str) -> list[dict]:
                                coalesce(cat.description_long, '')            AS description_long,
                                coalesce(string_agg(column_name, ' '), '')    as column_names,
                                coalesce(string_agg(column_comment, ' '), '') as column_comments
-                        FROM information_schema.tables
+                        FROM tables
                                  LEFT JOIN public.ookcatalog cat
                                            on tables.table_schema = cat.table_schema AND tables.table_name = cat.table_name
                                  CROSS JOIN LATERAL (
                                     SELECT column_name,
                                            col_description(to_regclass(table_schema || '.' || table_name),
                                                            ordinal_position) as column_comment
-                                    FROM information_schema.columns
+                                    FROM columns
                                     WHERE columns.table_schema = tables.table_schema
                                       AND columns.table_name = tables.table_name
                                     ) AS columns
@@ -289,14 +329,20 @@ def db_catalog_retrieve_tables(db) -> list[dict]:
     with db.cursor() as cur:
         cur.execute(  # PostgreSQL request to insert all tables in the catalog, returning these tables
             """
-            WITH inserted AS (INSERT INTO public.ookcatalog (table_schema, table_name)
-                SELECT tables.table_schema, tables.table_name
-                FROM information_schema.tables
-                         LEFT JOIN public.ookcatalog AS cat
-                                   ON tables.table_schema = cat.table_schema AND tables.table_name = cat.table_name
-                WHERE tables.table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
-                  AND cat.table_schema is null
-                RETURNING table_schema, table_name)
+            WITH tables AS (SELECT nspname AS table_schema, relname AS table_name
+                            FROM pg_catalog.pg_class
+                                     INNER JOIN pg_catalog.pg_namespace ON pg_class.relnamespace = pg_namespace.oid
+                            WHERE relpersistence = 'p'
+                              AND relkind in ('r', 'v', 'm', 'f', 'p')
+                              AND has_table_privilege(pg_class.oid, 'select')),
+                inserted AS (INSERT INTO public.ookcatalog (table_schema, table_name)
+                    SELECT tables.table_schema, tables.table_name
+                    FROM tables
+                             LEFT JOIN public.ookcatalog AS cat
+                                       ON tables.table_schema = cat.table_schema AND tables.table_name = cat.table_name
+                    WHERE tables.table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
+                      AND cat.table_schema is null
+                    RETURNING table_schema, table_name)
             SELECT *
             FROM inserted
             ORDER BY table_schema, table_name;
@@ -319,9 +365,15 @@ def db_tables_missing_comment(db) -> list[dict]:
     with db.cursor() as cur:
         cur.execute(  # PostgreSQL request to get table without a comment
             """
+            WITH tables AS (SELECT nspname AS table_schema, relname AS table_name
+                            FROM pg_catalog.pg_class
+                                     INNER JOIN pg_catalog.pg_namespace ON pg_class.relnamespace = pg_namespace.oid
+                            WHERE relpersistence = 'p'
+                              AND relkind in ('r', 'v', 'm', 'f', 'p')
+                              AND has_table_privilege(pg_class.oid, 'select'))
             SELECT table_schema,
                    table_name
-            FROM information_schema.tables
+            FROM tables
             WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
               AND obj_description(to_regclass(table_schema || '.' || table_name), 'pg_class') IS NULL
             ORDER BY table_schema, table_name
@@ -343,9 +395,21 @@ def db_tables_with_columns_missing_comment(db) -> list[dict]:
     with db.cursor() as cur:
         cur.execute(
             """
+            WITH columns AS (SELECT pg_namespace.nspname AS table_schema,
+                                    pg_class.relname     AS table_name,
+                                    attname              AS column_name,
+                                    pg_type.typname      AS data_type,
+                                    attnum               AS ordinal_position
+                             FROM pg_catalog.pg_attribute
+                                      INNER JOIN pg_catalog.pg_class ON pg_attribute.attrelid = pg_class.oid
+                                      INNER JOIN pg_catalog.pg_namespace ON pg_class.relnamespace = pg_namespace.oid
+                                      INNER JOIN pg_catalog.pg_type ON pg_attribute.atttypid = pg_type.oid
+                             WHERE pg_class.relkind in ('r', 'v', 'm', 'f', 'p') -- Only get tables attributes, not index or others
+                               AND attnum >= 1 -- Get only columns and not other attributes
+            )
             SELECT table_schema,
                    table_name
-            FROM information_schema.columns
+            FROM columns
             WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
               AND col_description(to_regclass(table_schema || '.' || table_name), ordinal_position) IS NULL
             GROUP BY table_schema, table_name
@@ -368,9 +432,15 @@ def db_tables_missing_ookcatalog_details(db) -> list[dict]:
     with db.cursor() as cur:
         cur.execute(
             """
+            WITH tables AS (SELECT nspname AS table_schema, relname AS table_name
+                            FROM pg_catalog.pg_class
+                                     INNER JOIN pg_catalog.pg_namespace ON pg_class.relnamespace = pg_namespace.oid
+                            WHERE relpersistence = 'p'
+                              AND relkind in ('r', 'v', 'm', 'f', 'p')
+                              AND has_table_privilege(pg_class.oid, 'select'))
             SELECT tables.table_schema,
                    tables.table_name
-            FROM information_schema.tables
+            FROM tables
                      LEFT JOIN public.ookcatalog cat
                                ON tables.table_schema = cat.table_schema AND tables.table_name = cat.table_name
             WHERE tables.table_schema NOT IN ('information_schema', 'pg_catalog', 'topology')
